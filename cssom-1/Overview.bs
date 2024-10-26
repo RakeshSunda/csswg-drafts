@@ -2,34 +2,17 @@
 Title: CSS Object Model (CSSOM)
 ED: https://drafts.csswg.org/cssom/
 TR: https://www.w3.org/TR/cssom-1/
-Previous Version: https://www.w3.org/TR/2021/WD-cssom-1-20210826/
-Previous Version: https://www.w3.org/TR/2016/WD-cssom-1-20160317/
-Previous Version: https://www.w3.org/TR/2013/WD-cssom-20131205/
-Previous Version: https://www.w3.org/TR/2011/WD-cssom-20110712/
 Previous Version: https://www.w3.org/TR/2000/REC-DOM-Level-2-Style-20001113/
 Group: CSSWG
 Status: ED
 Prepare for TR: no
 Work Status: Exploring
 Shortname: cssom
-Level: 1
-Editor: Daniel Glazman, Disruptive Innovations http://disruptive-innovations.com/, daniel.glazman@disruptive-innovations.com, w3cid 13329
-Editor: Emilio Cobos Álvarez 106537, Mozilla, emilio@mozilla.com
-Former Editor: Simon Pieters, Opera Software AS http://www.opera.com, simonp@opera.com
-Former Editor: Glenn Adams, Cox Communications&#44; Inc. http://www.cox.com, glenn.adams@cos.com, http://www.w3.org/wiki/User:Gadams
-Former Editor: Anne van Kesteren, Opera Software ASA http://www.opera.com, annevk@annevk.nl, https://annevankesteren.nl/
-!Legacy issues list: <a href="https://www.w3.org/Bugs/Public/buglist.cgi?product=CSS&amp;component=CSSOM&amp;resolution=---">Bugzilla</a>
+
 Abstract: CSSOM defines APIs (including generic parsing and serialization rules) for Media Queries, Selectors, and of course CSS itself.
 Repository: w3c/csswg-drafts
-Ignored Terms: EmptyString, group of selectors, list of css page selectors, -webkit-transform
-Ignored Vars: m1, m2, camel_cased_attribute, webkit_cased_attribute, dashed_attribute
 Include Can I Use Panels: true
-Can I Use URL: https://drafts.csswg.org/cssom/
-Can I Use URL: https://www.w3.org/TR/cssom-1/
-Ignore Can I Use URL Failure: https://drafts.csswg.org/cssom/
-Ignore Can I Use URL Failure: https://www.w3.org/TR/cssom-1/
 </pre>
-
 <pre class='anchors'>
 urlPrefix: https://html.spec.whatwg.org/multipage/
     urlPrefix: infrastructure.html
@@ -175,242 +158,42 @@ main .atrisk::before {
 </style>
 
 Introduction {#introduction}
-============================
-
-This document formally specifies the core features of the CSS Object Model (CSSOM). Other documents in the CSSOM family of specifications
-as well as other CSS related specifications define extensions to these core features.
-
-The core features of the CSSOM are oriented towards providing basic capabilities to author-defined scripts to permit access to
-and manipulation of style related state information and processes.
-
-The features defined below are fundamentally based on prior specifications of the W3C DOM Working Group, primarily
-[[DOM]]. The purposes of the present document are (1) to improve on that prior work by providing
-more technical specificity (so as to improve testability and interoperability), (2) to deprecate or remove certain less-widely implemented
-features no longer considered to be essential in this context, and (3) to newly specify certain extensions that have been
-or expected to be widely implemented.
-
-
-Terminology {#terminology}
-==========================
-
-This specification employs certain terminology from the following documents:
 <cite>DOM</cite>,
 <cite>HTML</cite>,
 <cite>CSS Syntax</cite>,
 <cite>Encoding</cite>,
 <cite>URL</cite>,
 <cite>Fetch</cite>,
-<cite>Associating Style Sheets with XML documents</cite>
-and
-<cite>XML</cite>.
-[[!DOM]]
-[[!HTML]]
-[[!CSS3SYN]]
-[[!ENCODING]]
-[[!URL]]
-[[!FETCH]]
-[[!XML-STYLESHEET]]
-[[!XML]]
-
-When this specification talks about object
-<code><var>A</var></code> where <code><var>A</var></code> is actually an interface, it generally means an object implementing interface
+<code><var>A</var></code> where <code><var>A</var></code> interface
 <code><var>A</var></code>.
-
-The terms <dfn>set</dfn> and <dfn>unset</dfn> to refer to the true and
-false values of binary flags or variables, respectively. These terms are also used as verbs in which case they refer to
-mutating some value to make it true or false, respectively.
-
-The term <dfn export>supported styling language</dfn> refers to CSS.
-
-Note: If another styling language becomes supported in user agents, this specification is expected to be updated as necessary.
-
-The term <dfn export>supported CSS property</dfn> refers to a CSS property that the user agent
-implements, including any vendor-prefixed properties, but excluding <a>custom properties</a>. A
-<a>supported CSS property</a> must be in its lowercase form for the purpose of comparisons in this
-specification.
-
-In this specification the ''::before'' and ''::after'' pseudo-elements
-are assumed to exist for all elements even if no box is generated for them.
-
-When a method or an attribute is said to call another method or attribute, the user agent must invoke its internal API for that attribute or method so that
-e.g. the author can't change the behavior by overriding attributes or methods with custom properties or functions in ECMAScript.
-
-Unless otherwise stated, string comparisons are done in a <a>case-sensitive</a> manner.
-
-
-Common Serializing Idioms {#common-serializing-idioms}
-------------------------------------------------------
-
-To <dfn export>escape a character</dfn> means to create a string of
-"<code>\</code>" (U+005C), followed by the character.
-
-To <dfn lt="escape a character as code point|escaped as code point">escape a character as code point</dfn> means to create a
-string of "<code>\</code>" (U+005C), followed by the Unicode code point as
-the smallest possible number of hexadecimal digits in the range 0-9 a-f
-(U+0030 to U+0039 and U+0061 to U+0066) to represent the code point in
-base 16, followed by a single SPACE (U+0020).
-
-To <dfn export>serialize an identifier</dfn> means to create a string represented
-by the concatenation of, for each character of the identifier:
-
+<dfn lt="escape a character as code point|escaped as code point">escape a character</dfn>
+string of "<code>\</code>" 
 <ul>
- <li>If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
- <li>If the character is in the range [\1-\1f] (U+0001 to U+001F) or is U+007F, then the character
- <a>escaped as code point</a>.
- <li>If the character is the first character and is in the range \[0-9]
- (U+0030 to U+0039), then the character
- <a>escaped as code point</a>.
- <li>If the character is the second character and is in the range \[0-9]
- (U+0030 to U+0039) and the first character is a "<code>-</code>"
- (U+002D), then the character
- <a>escaped as code point</a>.
- <li>If the character is the first character and is a "<code>-</code>" (U+002D),
- and there is no second character,
- then the <a lt="escape a character">escaped</a> character.
- <li>If the character is not handled by one of the above rules and is
- greater than or equal to U+0080, is "<code>-</code>" (U+002D) or
- "<code>_</code>" (U+005F), or is in one of the ranges \[0-9] (U+0030 to
- U+0039), \[A-Z] (U+0041 to U+005A), or \[a-z] (U+0061 to U+007A), then the character
- itself.
- <li>Otherwise, the <a lt="escape a character">escaped</a>
- character.
+ <li><List/li>
 </ul>
-
-To <dfn export>serialize a string</dfn> means to create a string represented
-by '"' (U+0022), followed by the result of applying the rules
-below to each character of the given string, followed by
-'"' (U+0022):
-
-<ul>
- <li>If the character is NULL (U+0000), then the REPLACEMENT CHARACTER (U+FFFD).
- <li>If the character is in the range [\1-\1f] (U+0001 to U+001F) or is U+007F, the character
- <a>escaped as code point</a>.
- <li>If the character is '"' (U+0022) or "<code>\</code>"
- (U+005C), the <a lt="escape a character">escaped</a> character.
- <li>Otherwise, the character itself.
-</ul>
-
-Note: "<code>'</code>" (U+0027) is not escaped because strings
-are always serialized with '"' (U+0022).
-
-To <dfn export>serialize a URL</dfn> means to create a string represented by
-"<code>url(</code>", followed by the
-<a lt="serialize a string">serialization</a> of the URL as a
-string, followed by "<code>)</code>".
-
-To <dfn export>serialize a LOCAL</dfn> means to create a string represented by
-"<code>local(</code>", followed by the
-<a lt="serialize a string">serialization</a> of the LOCAL as a
-string, followed by "<code>)</code>".
-
-To <dfn export>serialize a comma-separated list</dfn> concatenate all items of
-the list in list order while separating them by "<code>, </code>", i.e.,
-COMMA (U+002C) followed by a single SPACE (U+0020).
-
-To <dfn export>serialize a whitespace-separated list</dfn> concatenate all
-items of the list in list order while separating them by "<code> </code>", i.e.,
-a single SPACE (U+0020).
-
-Note: When serializing a list according to the above rules,
-extraneous whitespace is not inserted prior to the first item or subsequent to
-the last item. Unless otherwise specified, an empty list is serialized as the
-empty string.
-
-
-CSSOMString {#cssomstring-type}
-===============================
-
-Most strings in CSSOM interfaces use the <dfn interface>CSSOMString</dfn> type.
-Each implementation chooses to define it as either {{USVString}} or {{DOMString}}:
-
-<pre class="def lang-webidl">
-typedef USVString CSSOMString;
-</pre>
-
-Or, alternatively:
-
-<pre class="def lang-webidl">
-typedef DOMString CSSOMString;
-</pre>
-
 <div class=note>
-  The difference is only observable from web content
-  when <a>surrogate</a> code units are involved.
-  {{DOMString}} would preserve them,
-  whereas {{USVString}} would replace them with U+FFFD REPLACEMENT CHARACTER.
-
-  This choice effectively allows implementations to do this replacement,
-  but does not require it.
-
-  Using {{USVString}} enables an implementation
-  to use UTF-8 internally to represent strings in memory.
-  Since well-formed UTF-8 specifically disallows <a>surrogate</a> code points,
-  it effectively requires this replacement.
-
-  On the other hand,
-  implementations that internally represent strings as 16-bit <a>code units</a>
-  might prefer to avoid the cost of doing this replacement.
+  {{DOMString}}
+  whereas {{USVString}} 
+  {{USVString}}
 </div>
-
-
-Media Queries {#media-queries}
-==============================
-
-[=Media queries=] are defined by [[!MEDIAQUERIES]]. This
-section defines various concepts around [=media queries=], including their API
-and serialization form.
-
-
-Parsing Media Queries {#parsing-media-queries}
-----------------------------------------------
-
-To <dfn export>parse a media query list</dfn> for a
-given string <var>s</var> into a [=media query list=] is defined in
-the Media Queries specification. Return the list of media
-queries that the algorithm defined there gives. <!-- XXX ref -->
-
-Note: A media query that ends up being "ignored" will turn
-into "<code>not all</code>".
-
-To <dfn export>parse a media query</dfn> for a given string
-<var>s</var> means to follow the
-<a>parse a media query list</a> steps and return null if more
-than one media query is returned or a media query if a
-single media query is returned.
-
-Note: Again, a media query that ends up being "ignored" will
-turn into "<code>not all</code>".
-
-
-Serializing Media Queries {#serializing-media-queries}
-------------------------------------------------------
-
-To
-<dfn export>serialize a media query list</dfn>
-run these steps:
-
+<dfn export>parse a media query</dfn>
+<var>s</var> 
 <ol>
  <li>If the [=media query list=] is empty, then return the empty string.
-
  <li><a lt="serialize a media query">Serialize</a> each media query in the list of media queries, in the same order as they appear in the [=media query list=], and then <a lt="serialize a comma-separated list">serialize</a> the list.
 </ol>
-
 To
 <dfn export>serialize a media query</dfn> let
 <var>s</var> be the empty string, run the steps below:
-
 <ol>
  <li>If the [=media query=] is negated append "<code>not</code>", followed
  by a single SPACE (U+0020), to <var>s</var>.
-
  <li>Let <var>type</var> be the <a lt="serialize an identifier">serialization
  as an identifier</a> of the [=media type=] of the [=media query=],
  <a lt="ASCII lowercase">converted to ASCII lowercase</a>.
-
  <li>If the [=media query=] does not contain [=media features=] append
  <var>type</var>, to <var>s</var>,
  then return <var>s</var>.
-
  <li>If <var>type</var> is not "<code>all</code>" or if the
  media query is negated append <var>type</var>, followed by a
  single SPACE (U+0020), followed by "<code>and</code>", followed by a single SPACE
@@ -418,7 +201,6 @@ To
 
  <li>
   Then, for each [=media feature=]:
-
   <ol>
    <li>Append a "<code>(</code>" (U+0028), followed by the [=media feature=]
    name, <a lt="ASCII lowercase">converted to ASCII lowercase</a>,
@@ -438,350 +220,6 @@ To
   </ol>
 
  <li>Return <var>s</var>.
-
-</ol>
-
-<div class="example">
- Here are some examples of input (first column) and output (second
- column):
-
- <table class="complex data">
-  <thead>
-   <tr><th>Input<th>Output
-  <tbody>
-   <tr>
-    <td><pre>not screen and (min-WIDTH:5px) AND (max-width:40px)</pre>
-    <td><pre>not screen and (min-width: 5px) and (max-width: 40px)</pre>
-   <tr>
-    <td><pre>all and (color) and (color)</pre>
-    <td><pre>(color) and (color)</pre>
- </table>
-</div>
-
-### Serializing Media Feature Values ### {#serializing-media-feature-values}
-
-Issue: This should probably be done in terms of mapping it to
-serializing CSS values as media features are defined in terms of CSS
-values after all.
-
-To <dfn export>serialize a media feature value</dfn>
-named <var>v</var> locate <var>v</var> in the first
-column of the table below and use the serialization format described in
-the second column:
-
-<table class="complex data" spec=mediaqueries-4>
- <thead>
-  <tr>
-   <th>Media Feature
-   <th>Serialization
- <tbody>
-  <tr>
-   <td>'@media/width'
-   <td>...
-  <tr>
-   <td>'@media/height'
-   <td>...
-  <tr>
-   <td>'device-width'
-   <td>...
-  <tr>
-   <td>'device-height'
-   <td>...
-  <tr>
-   <td>'orientation'
-   <td>
-    If the value is ''portrait'': "<code>portrait</code>".
-    If the value is ''landscape'': "<code>landscape</code>".
-  <tr>
-   <td>'aspect-ratio'
-   <td>...
-  <tr>
-   <td>'device-aspect-ratio'
-   <td>...
-  <tr>
-   <td>'@media/color'
-   <td>...
-  <tr>
-   <td>'color-index'
-   <td>...
-  <tr>
-   <td>'monochrome'
-   <td>...
-  <tr>
-   <td>'resolution'
-   <td>...
-  <tr>
-   <td>'scan'
-   <td>
-    If the value is ''progressive'': "<code>progressive</code>".
-    If the value is ''interlace'': "<code>interlace</code>".
-  <tr>
-   <td>'grid'
-   <td>...
-</table>
-
-Other specifications can extend this table and vendor-prefixed media
-features can have custom serialization formats as well.
-
-
-Comparing Media Queries {#comparing-media-queries}
---------------------------------------------------
-
-To
-<dfn export>compare media queries</dfn>
-<var>m1</var> and <var>m2</var> means to
-<a lt="serialize a media query">serialize</a> them both and
-return true if they are a
-<a>case-sensitive</a> match and false if they
-are not.
-
-
-The {{MediaList}} Interface {#the-medialist-interface}
-------------------------------------------------------
-
-An object that implements the <code>MediaList</code> interface has an associated <dfn export for=MediaList>collection of media queries</dfn>.
-
-<pre class=idl>
-[Exposed=Window]
-interface MediaList {
-  stringifier attribute [LegacyNullToEmptyString] CSSOMString mediaText;
-  readonly attribute unsigned long length;
-  getter CSSOMString? item(unsigned long index);
-  undefined appendMedium(CSSOMString medium);
-  undefined deleteMedium(CSSOMString medium);
-};
-</pre>
-
-The object's <a>supported property indices</a> are the numbers in the range zero to one less than the number of media queries
-in the <a>collection of media queries</a> represented by the collection. If there are no such media queries, then there are no
-<a>supported property indices</a>.
-
-To <dfn export>create a <code>MediaList</code> object</dfn> with a string <var>text</var>, run the following steps:
-<ol>
- <li>Create a new <code>MediaList</code> object.
- <li>Set its {{MediaList/mediaText}} attribute to <var>text</var>.
- <li>Return the newly created <code>MediaList</code> object.
-</ol>
-
-The <dfn attribute for=MediaList>mediaText</dfn> attribute, on getting, must return a
-<a lt="serialize a media query list">serialization</a> of the <a>collection of media queries</a>.
-Setting the {{MediaList/mediaText}} attribute must run these steps:
-<ol>
- <li>Empty the <a>collection of media queries</a>.
- <li>If the given value is the empty string, then return.
- <li>Append all the media queries as a result of <a lt="parse a media query list">parsing</a> the given
- value to the <a>collection of media queries</a>.
-</ol>
-
-The <dfn method for=MediaList>item(<var>index</var>)</dfn> method must return a
-<a lt="serialize a media query">serialization</a> of the media query in the <a>collection of media queries</a>
-given by <var>index</var>, or null, if <var>index</var> is greater than or equal to the number of media queries
-in the <a>collection of media queries</a>.
-
-The <dfn attribute for=MediaList>length</dfn> attribute must return the number of media queries in the <a>collection of media
-queries</a>.
-
-The <dfn method for=MediaList>appendMedium(<var>medium</var>)</dfn> method must run these steps:
-<ol>
- <li>Let <var>m</var> be the result of <a lt="parse a media query">parsing</a> the given value.
- <li>If <var>m</var> is null, then return.
- <li>If <a lt="compare media queries">comparing</a> <var>m</var> with any of the media queries in the
- <a>collection of media queries</a> returns true, then return.
- <li>Append <var>m</var> to the <a>collection of media queries</a>.
-</ol>
-
-The <dfn method for=MediaList>deleteMedium(<var>medium</var>)</dfn> method must run these steps:
-<ol>
- <li>Let <var>m</var> be the result of <a lt="parse a media query">parsing</a> the given value.
- <li>If <var>m</var> is null, then return.
- <li>Remove any media query from the <a>collection of media queries</a> for which
- <a lt="compare media queries">comparing</a> the media query with <var>m</var> returns true.
- If nothing was removed, then <a>throw</a> a {{NotFoundError}} exception.
-</ol>
-
-Selectors {#selectors}
-======================
-
-Selectors are defined in the Selectors specification. This section
-mainly defines how to serialize them. <!-- XXX ref -->
-
-<!-- XXX ref universal selector etc? some are in A some not -->
-
-
-Parsing Selectors {#parsing-selectors}
---------------------------------------
-
-To
-<dfn export>parse a group of selectors</dfn>
-means to parse the value using the <code>selectors_group</code>
-production defined in the Selectors specification and return either a
-group of selectors if parsing did not fail or null if parsing did
-fail. <!-- XXX ref -->
-
-
-Serializing Selectors {#serializing-selectors}
-----------------------------------------------
-
-<!-- http://dump.testsuite.org/2009/cssom/serializing-selectors.htm -->
-
-To
-<dfn export>serialize a group of selectors</dfn>
-<a lt="serialize a selector">serialize</a> each selector in the
-group of selectors and then
-<a lt="serialize a comma-separated list">serialize</a> a
-comma-separated list of these serializations.
-
-To <dfn export>serialize a selector</dfn> let
-<var>s</var> be the empty string, run the steps below for each
-part of the chain of the selector, and finally return
-<var>s</var>:
-
-<ol>
- <li>If there is only one <a>simple selector</a> in the
- <a>compound selectors</a> which is a
- <a>universal selector</a>, append the result of
- <a lt="serialize a simple selector">serializing</a> the
- <a>universal selector</a> to <var>s</var>.
-
- <li>Otherwise, for each <a>simple selector</a> in the
- <a>compound selectors</a> that is not a
- universal selector of which the
- <a>namespace prefix</a> maps to a namespace that is not the
- <a>default namespace</a>
- <a lt="serialize a simple selector">serialize</a> the
- <a>simple selector</a> and append the result to
- <var>s</var>.
-
- <li>If this is not the last part of the chain of the selector append a
- single SPACE (U+0020), followed by the combinator
- "<code>></code>",
- "<code>+</code>",
- "<code>~</code>",
- "<code>>></code>",
- "<code>||</code>",
- as appropriate, followed by another single SPACE (U+0020) if the combinator was
- not whitespace, to <var>s</var>.
-
- <li>If this is the last part of the chain of the selector and there is
- a pseudo-element, append "<code>::</code>" followed by the name of the
- pseudo-element, to <var>s</var>.
-</ol>
-
-
-To
-<dfn export>serialize a simple selector</dfn>
-let <var>s</var> be the empty string, run the steps below, and
-finally return <var>s</var>:
-
-<dl class="switch">
- <dt>type selector
- <dt>universal selector
- <dd>
-  <ol>
-   <li>If the <a>namespace prefix</a> maps to a namespace that is
-   not the <a>default namespace</a> and is not the
-   null namespace (not in a namespace) append the
-   <a lt="serialize an identifier">serialization</a> of the
-   <a>namespace prefix</a> as an identifier, followed by a
-   "<code>|</code>" (U+007C) to <var>s</var>.
-
-   <li>If the <a>namespace prefix</a> maps to a namespace that is
-   the null namespace (not in a namespace) append
-   "<code>|</code>" (U+007C) to <var>s</var>.
-   <!-- This includes |* -->
-
-   <li>If this is a type selector append the
-   <a lt="serialize an identifier">serialization</a> of the element name
-   as an identifier to <var>s</var>.
-
-   <li>If this is a universal selector append "<code>*</code>" (U+002A)
-   to <var>s</var>.
-  </ol>
-
-
- <dt>attribute selector
- <dd>
-  <ol>
-   <li>Append "<code>[</code>" (U+005B) to
-   <var>s</var>.
-
-   <li>If the <a>namespace prefix</a> maps to a namespace that is
-   not the null namespace (not in a namespace) append the
-   <a lt="serialize an identifier">serialization</a> of the
-   <a>namespace prefix</a> as an identifier, followed by a
-   "<code>|</code>" (U+007C) to <var>s</var>.
-
-   <li>Append the <a lt="serialize an identifier">serialization</a>
-   of the attribute name as an identifier to <var>s</var>.
-
-   <li>If there is an attribute value specified, append
-   "<code>=</code>",
-   "<code>~=</code>",
-   "<code>|=</code>",
-   "<code>^=</code>",
-   "<code>$=</code>", or
-   "<code>*=</code>"
-   as appropriate (depending on the type of attribute selector), followed
-   by the <a lt="serialize a string">serialization</a> of the
-   attribute value as a string, to <var>s</var>.
-
-   <li>If the attribute selector has the case-sensitivity flag present,
-   append "<code> i</code>" (U+0020 U+0069) to <var>s</var>.
-
-   <li>Append "<code>]</code>" (U+005D) to
-   <var>s</var>.
-  </ol>
-
-
- <dt>class selector
- <dd>Append a "<code>.</code>" (U+002E), followed by the
- <a lt="serialize an identifier">serialization</a> of the class name
- as an identifier to <var>s</var>.
-
- <dt>ID selector
- <dd>Append a "<code>#</code>" (U+0023), followed by the
- <a lt="serialize an identifier">serialization</a> of the ID
- as an identifier to <var>s</var>.
-
- <dt>pseudo-class
- <dd>
-  If the pseudo-class does not accept arguments append
-  "<code>:</code>" (U+003A), followed by the name of the pseudo-class, to
-  <var>s</var>.
-
-  Otherwise, append "<code>:</code>" (U+003A), followed by the name of
-  the pseudo-class, followed by "<code>(</code>" (U+0028), followed by the
-  value of the pseudo-class argument(s) determined as per below, followed by
-  "<code>)</code>" (U+0029), to <var>s</var>.
-
-  <dl class="switch">
-   <dt><code>:lang()</code>
-   <dd>The <a lt="serialize a comma-separated list">serialization of a
-   comma-separated list</a> of each argument's
-   <a lt="serialize a string">serialization as a string</a>, preserving
-   relative order.
-
-   <dt><code>:nth-child()</code>
-   <dt><code>:nth-last-child()</code>
-   <dt><code>:nth-of-type()</code>
-   <dt><code>:nth-last-of-type()</code>
-   <dd>The result of serializing the value using the rules to <a>serialize an &lt;an+b> value</a>.
-
-   <dt><code>:not()</code>
-   <dd>The result of serializing the value using the rules for
-   <a lt="serialize a group of selectors">serializing a group of selectors</a>.
-  </dl>
-
-</dl>
-
-
-CSS {#css-object-model}
-=======================
-
-
-CSS Style Sheets {#css-style-sheets}
-------------------------------------
-
 A <dfn export>CSS style sheet</dfn> is an abstract concept that
 represents a style sheet as defined by the CSS specification. In the CSSOM a
 <a>CSS style sheet</a> is represented as a {{CSSStyleSheet}} object.
